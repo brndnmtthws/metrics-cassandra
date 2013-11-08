@@ -12,16 +12,18 @@ import java.net.InetAddress;
 import java.util.HashSet;
 import java.util.Date;
 import java.util.regex.Pattern;
+import java.util.List;
 
 /**
  * A client to a Carbon server.
  */
 public class Cassandra implements Closeable {
-    private static final Pattern WHITESPACE = Pattern.compile("[\\s]+");
+    private static final Pattern UNSAFE = Pattern.compile("[\\.\\s]+");
 
 	private final Cluster cluster;
 	private final String keyspace;
-	private final Long ttl;
+	private final String table;
+	private final int ttl;
 	private final ConsistencyLevel consistency;
 
     private int failures;
@@ -34,18 +36,24 @@ public class Cassandra implements Closeable {
      *
      * @param address Contact point of the Cassandra cluster
 	 * @param keyspace Keyspace for metrics
+         * @param table name of metric table
 	 * @param ttl TTL for entries
 	 * @param port Port for Cassandra cluster native transport contact point
 	 * @param consistency Consistency level to obtain
      */
-	public Cassandra(InetAddress address, String keyspace, Long ttl, int port, String consistency) {
-		this.cluster = Cluster.builder()
-			.addContactPoints(address)
+        public Cassandra(List<String> addresses, String keyspace, String table,
+            int ttl, int port, String consistency) {
+		Cluster.Builder builder = Cluster.builder();
+		for (String address : addresses) {
+			builder.addContactPoint(address);
+		}
+		this.cluster = builder
 			.withPort(port)
 			.withCompression(Compression.SNAPPY)
 			.build();
 
 		this.keyspace = keyspace;
+                this.table = table;
 		this.ttl = ttl;
 		this.consistency = ConsistencyLevel.valueOf(consistency);
 
@@ -66,26 +74,26 @@ public class Cassandra implements Closeable {
      * @param name      the name of the metric
      * @param value     the value of the metric
      * @param timestamp the timestamp of the metric
-     * @throws IOException if there was an error sending the metric
+     * @throws DriverException if there was an error sending the metric
      */
-    public void send(String table, String name, Double value, Date timestamp) throws IOException {
+    public void send(String name, Double value, Date timestamp) throws DriverException {
         try {
-			String cleanTable = sanitize(table);
-			if (!tableSet.contains(cleanTable)) {
+			String tableName = sanitize(table);
+			if (!tableSet.contains(tableName)) {
 				session.execute(new SimpleStatement(
-							"CREATE TABLE IF NOT EXISTS ? (   " +
+							"CREATE TABLE IF NOT EXISTS " + tableName + " (   " +
 							"  name VARCHAR,                  " +
 							"  timestamp TIMESTAMP,           " +
 							"  value DOUBLE,                  " +
-							"  PRIMARY KEY (name, time))      ",
-							cleanTable)
+							"  PRIMARY KEY (name, timestamp)) ")
 						.setConsistencyLevel(consistency)
 						);
+				tableSet.add(tableName);
 			}
 
 			session.execute(new SimpleStatement(
-						"INSERT INTO ? (name, timestamp, value) VALUES (?, ?, ?) USING TTL ?",
-						cleanTable, name, timestamp, value, ttl)
+						"INSERT INTO " + tableName + " (name, timestamp, value) VALUES (?, ?, ?) USING TTL ?",
+						name, timestamp, value, ttl)
 					.setConsistencyLevel(consistency)
 					);
 
@@ -110,7 +118,7 @@ public class Cassandra implements Closeable {
 		session.shutdown();
     }
 
-	protected String sanitize(String s) {
-        return WHITESPACE.matcher(s).replaceAll("-").replaceAll("\\.", "_");
+    protected String sanitize(String s) {
+        return UNSAFE.matcher(s).replaceAll("_");
     }
 }

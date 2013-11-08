@@ -5,7 +5,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.datastax.driver.core.exceptions.DriverException;
 
-import java.io.IOException;
 import java.util.Locale;
 import java.util.Map;
 import java.util.SortedMap;
@@ -172,87 +171,87 @@ public class CassandraReporter extends ScheduledReporter {
             for (Map.Entry<String, Timer> entry : timers.entrySet()) {
                 reportTimer(entry.getKey(), entry.getValue(), timestamp);
             }
-        } catch (IOException e) {
+		} catch (DriverException e) {
             LOGGER.warn("Unable to report to Cassandra", cassandra, e);
         } finally {
             try {
                 cassandra.close();
             } catch (DriverException e) {
-                LOGGER.debug("Error disconnecting from Cassandra", cassandra, e);
+                LOGGER.warn("Error disconnecting from Cassandra", cassandra, e);
             }
         }
     }
 
-    private void reportTimer(String name, Timer timer, Date timestamp) throws IOException {
+    private void reportTimer(String name, Timer timer, Date timestamp) throws DriverException {
         final Snapshot snapshot = timer.getSnapshot();
 
-        cassandra.send(prefix(name), "max", format(convertDuration(snapshot.getMax())), timestamp);
-        cassandra.send(prefix(name), "mean", format(convertDuration(snapshot.getMean())), timestamp);
-        cassandra.send(prefix(name), "min", format(convertDuration(snapshot.getMin())), timestamp);
-        cassandra.send(prefix(name), "stddev",
+        cassandra.send(prefix(name, "max"), format(convertDuration(snapshot.getMax())), timestamp);
+        cassandra.send(prefix(name, "mean"), format(convertDuration(snapshot.getMean())), timestamp);
+        cassandra.send(prefix(name, "min"), format(convertDuration(snapshot.getMin())), timestamp);
+        cassandra.send(prefix(name, "stddev"),
                       format(convertDuration(snapshot.getStdDev())),
                       timestamp);
-        cassandra.send(prefix(name), "p50",
+        cassandra.send(prefix(name, "p50"),
                       format(convertDuration(snapshot.getMedian())),
                       timestamp);
-        cassandra.send(prefix(name), "p75",
+        cassandra.send(prefix(name, "p75"),
                       format(convertDuration(snapshot.get75thPercentile())),
                       timestamp);
-        cassandra.send(prefix(name), "p95",
+        cassandra.send(prefix(name, "p95"),
                       format(convertDuration(snapshot.get95thPercentile())),
                       timestamp);
-        cassandra.send(prefix(name), "p98",
+        cassandra.send(prefix(name, "p98"),
                       format(convertDuration(snapshot.get98thPercentile())),
                       timestamp);
-        cassandra.send(prefix(name), "p99",
+        cassandra.send(prefix(name, "p99"),
                       format(convertDuration(snapshot.get99thPercentile())),
                       timestamp);
-        cassandra.send(prefix(name), "p999",
+        cassandra.send(prefix(name, "p999"),
                       format(convertDuration(snapshot.get999thPercentile())),
                       timestamp);
 
         reportMetered(name, timer, timestamp);
     }
 
-    private void reportMetered(String name, Metered meter, Date timestamp) throws IOException {
-        cassandra.send(prefix(name), "count", format(meter.getCount()), timestamp);
-        cassandra.send(prefix(name), "m1_rate",
+    private void reportMetered(String name, Metered meter, Date timestamp) throws DriverException {
+        cassandra.send(prefix(name, "count"), format(meter.getCount()), timestamp);
+        cassandra.send(prefix(name, "m1_rate"),
                       convertRate(meter.getOneMinuteRate()),
                       timestamp);
-        cassandra.send(prefix(name), "m5_rate",
+        cassandra.send(prefix(name, "m5_rate"),
                       format(convertRate(meter.getFiveMinuteRate())),
                       timestamp);
-        cassandra.send(prefix(name), "m15_rate",
+        cassandra.send(prefix(name, "m15_rate"),
                       format(convertRate(meter.getFifteenMinuteRate())),
                       timestamp);
-        cassandra.send(prefix(name), "mean_rate",
+        cassandra.send(prefix(name, "mean_rate"),
                       format(convertRate(meter.getMeanRate())),
                       timestamp);
     }
 
-    private void reportHistogram(String name, Histogram histogram, Date timestamp) throws IOException {
+    private void reportHistogram(String name, Histogram histogram, Date timestamp) throws DriverException {
         final Snapshot snapshot = histogram.getSnapshot();
-        cassandra.send(prefix(name), "count", format(histogram.getCount()), timestamp);
-        cassandra.send(prefix(name), "max", format(snapshot.getMax()), timestamp);
-        cassandra.send(prefix(name), "mean", format(snapshot.getMean()), timestamp);
-        cassandra.send(prefix(name), "min", format(snapshot.getMin()), timestamp);
-        cassandra.send(prefix(name), "stddev", format(snapshot.getStdDev()), timestamp);
-        cassandra.send(prefix(name), "p50", format(snapshot.getMedian()), timestamp);
-        cassandra.send(prefix(name), "p75", format(snapshot.get75thPercentile()), timestamp);
-        cassandra.send(prefix(name), "p95", format(snapshot.get95thPercentile()), timestamp);
-        cassandra.send(prefix(name), "p98", format(snapshot.get98thPercentile()), timestamp);
-        cassandra.send(prefix(name), "p99", format(snapshot.get99thPercentile()), timestamp);
-        cassandra.send(prefix(name), "p999", format(snapshot.get999thPercentile()), timestamp);
+        cassandra.send(prefix(name, "count"), format(histogram.getCount()), timestamp);
+        cassandra.send(prefix(name, "max"), format(snapshot.getMax()), timestamp);
+        cassandra.send(prefix(name, "mean"), format(snapshot.getMean()), timestamp);
+        cassandra.send(prefix(name, "min"), format(snapshot.getMin()), timestamp);
+        cassandra.send(prefix(name, "stddev"), format(snapshot.getStdDev()), timestamp);
+        cassandra.send(prefix(name, "p50"), format(snapshot.getMedian()), timestamp);
+        cassandra.send(prefix(name, "p75"), format(snapshot.get75thPercentile()), timestamp);
+        cassandra.send(prefix(name, "p95"), format(snapshot.get95thPercentile()), timestamp);
+        cassandra.send(prefix(name, "p98"), format(snapshot.get98thPercentile()), timestamp);
+        cassandra.send(prefix(name, "p99"), format(snapshot.get99thPercentile()), timestamp);
+        cassandra.send(prefix(name, "p999"), format(snapshot.get999thPercentile()), timestamp);
     }
 
-    private void reportCounter(String name, Counter counter, Date timestamp) throws IOException {
-        cassandra.send(prefix(name), "count", format(counter.getCount()), timestamp);
+    private void reportCounter(String name, Counter counter, Date timestamp) throws DriverException {
+        cassandra.send(prefix(name, "count"), format(counter.getCount()), timestamp);
     }
 
-    private void reportGauge(String name, Gauge gauge, Date timestamp) throws IOException {
+    private void reportGauge(String name, Gauge gauge, Date timestamp) throws DriverException {
         final Double value = format(gauge.getValue());
         if (value != null) {
-            cassandra.send(prefix(name), "gauge", value, timestamp);
+            cassandra.send(prefix(name, "gauge"), value, timestamp);
         }
     }
 
