@@ -9,7 +9,6 @@ import com.datastax.driver.core.SimpleStatement;
 
 import java.io.*;
 import java.net.InetAddress;
-import java.util.HashSet;
 import java.util.Date;
 import java.util.regex.Pattern;
 import java.util.List;
@@ -27,19 +26,18 @@ public class Cassandra implements Closeable {
 	private final ConsistencyLevel consistency;
 
     private int failures;
-
+	private boolean initialized;
 	private Session session;
-	private HashSet<String> tableSet;
 
     /**
      * Creates a new client which connects to the given address and socket factory.
      *
      * @param address Contact point of the Cassandra cluster
 	 * @param keyspace Keyspace for metrics
-         * @param table name of metric table
+	 * @param table name of metric table
 	 * @param ttl TTL for entries
 	 * @param port Port for Cassandra cluster native transport contact point
-	 * @param consistency Consistency level to obtain
+	 * @param consistency Consistency level to attain
      */
         public Cassandra(List<String> addresses, String keyspace, String table,
             int ttl, int port, String consistency) {
@@ -57,7 +55,8 @@ public class Cassandra implements Closeable {
 		this.ttl = ttl;
 		this.consistency = ConsistencyLevel.valueOf(consistency);
 
-		this.tableSet = new HashSet<String>();
+		this.initialized = false;
+		this.failures = 0;
 	}
 
     /**
@@ -79,21 +78,34 @@ public class Cassandra implements Closeable {
     public void send(String name, Double value, Date timestamp) throws DriverException {
         try {
 			String tableName = sanitize(table);
-			if (!tableSet.contains(tableName)) {
+			if (!initialized) {
 				session.execute(new SimpleStatement(
 							"CREATE TABLE IF NOT EXISTS " + tableName + " (   " +
-							"  name VARCHAR,                  " +
-							"  timestamp TIMESTAMP,           " +
-							"  value DOUBLE,                  " +
-							"  PRIMARY KEY (name, timestamp)) ")
+							"  name VARCHAR,                                  " +
+							"  timestamp TIMESTAMP,                           " +
+							"  value DOUBLE,                                  " +
+							"  PRIMARY KEY (name, timestamp))")
 						.setConsistencyLevel(consistency)
 						);
-				tableSet.add(tableName);
+				session.execute(new SimpleStatement(
+							"CREATE TABLE IF NOT EXISTS " + tableName + "_names (   " +
+							"  name VARCHAR,                                        " +
+							"  last_updated TIMESTAMP,                              " +
+							"  PRIMARY KEY (name))")
+						.setConsistencyLevel(consistency)
+						);
+				initialized = true;
 			}
 
 			session.execute(new SimpleStatement(
 						"INSERT INTO " + tableName + " (name, timestamp, value) VALUES (?, ?, ?) USING TTL ?",
 						name, timestamp, value, ttl)
+					.setConsistencyLevel(consistency)
+					);
+
+			session.execute(new SimpleStatement(
+						"UPDATE " + tableName + "_names SET last_updated = ? WHERE name = ?",
+						timestamp, name)
 					.setConsistencyLevel(consistency)
 					);
 
