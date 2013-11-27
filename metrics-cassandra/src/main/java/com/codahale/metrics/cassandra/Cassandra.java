@@ -47,7 +47,7 @@ public class Cassandra implements Closeable {
 		}
 		this.cluster = builder
 			.withPort(port)
-			.withCompression(Compression.SNAPPY)
+			.withCompression(Compression.LZ4)
 			.build();
 
 		this.keyspace = keyspace;
