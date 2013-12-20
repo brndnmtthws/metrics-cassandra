@@ -4,8 +4,12 @@ import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.ProtocolOptions.Compression;
 import com.datastax.driver.core.exceptions.DriverException;
+import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.SimpleStatement;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.InetAddress;
@@ -19,15 +23,19 @@ import java.util.List;
 public class Cassandra implements Closeable {
   private static final Pattern UNSAFE = Pattern.compile("[\\.\\s]+");
 
-  private final Cluster cluster;
+	private final List<String> addresses;
+	private final int port;
   private final String keyspace;
   private final String table;
   private final int ttl;
   private final ConsistencyLevel consistency;
 
+  private Cluster cluster;
   private int failures;
   private boolean initialized;
   private Session session;
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(Cassandra.class);
 
   /**
    * Creates a new client which connects to the given address and socket factory.
@@ -41,30 +49,43 @@ public class Cassandra implements Closeable {
    */
   public Cassandra(List<String> addresses, String keyspace, String table,
       int ttl, int port, String consistency) {
-    Cluster.Builder builder = Cluster.builder();
-    for (String address : addresses) {
-      builder.addContactPoint(address);
-    }
-    this.cluster = builder
-      .withPort(port)
-      .withCompression(Compression.LZ4)
-      .build();
+		this.addresses = addresses;
+		this.port = port;
 
     this.keyspace = keyspace;
     this.table = table;
     this.ttl = ttl;
     this.consistency = ConsistencyLevel.valueOf(consistency);
 
+    this.cluster = build();
+
     this.initialized = false;
     this.failures = 0;
   }
+
+	private Cluster build() {
+		Cluster.Builder builder = Cluster.builder();
+		for (String address : addresses) {
+			builder.addContactPoint(address);
+		}
+		return builder
+			.withPort(port)
+			.withCompression(Compression.LZ4)
+			.build();
+	}
 
   /**
    * Connects to the server.
    *
    */
   public void connect() {
-    session = cluster.connect(keyspace);
+		try {
+			session = cluster.connect(keyspace);
+		} catch (NoHostAvailableException e) {
+			LOGGER.warn("Unable to connect to Cassandra, will retry contact points next time",
+					cluster, e);
+			cluster = build();
+		}
   }
 
   /**
