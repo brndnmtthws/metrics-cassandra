@@ -170,6 +170,8 @@ public class CassandraReporter extends ScheduledReporter {
       for (Map.Entry<String, Timer> entry : timers.entrySet()) {
         reportTimer(entry.getKey(), entry.getValue(), timestamp);
       }
+
+      cassandra.execute();
     } catch (DriverException e) {
       LOGGER.warn("Unable to report to Cassandra", cassandra, e);
     } finally {

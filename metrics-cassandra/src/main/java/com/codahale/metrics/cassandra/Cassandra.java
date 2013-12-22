@@ -7,6 +7,7 @@ import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.SimpleStatement;
+import com.datastax.driver.core.BatchStatement;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,8 +24,8 @@ import java.util.List;
 public class Cassandra implements Closeable {
   private static final Pattern UNSAFE = Pattern.compile("[\\.\\s]+");
 
-	private final List<String> addresses;
-	private final int port;
+  private final List<String> addresses;
+  private final int port;
   private final String keyspace;
   private final String table;
   private final int ttl;
@@ -34,6 +35,7 @@ public class Cassandra implements Closeable {
   private int failures;
   private boolean initialized;
   private Session session;
+  private BatchStatement batch;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(Cassandra.class);
 
@@ -49,8 +51,8 @@ public class Cassandra implements Closeable {
    */
   public Cassandra(List<String> addresses, String keyspace, String table,
       int ttl, int port, String consistency) {
-		this.addresses = addresses;
-		this.port = port;
+    this.addresses = addresses;
+    this.port = port;
 
     this.keyspace = keyspace;
     this.table = table;
@@ -63,29 +65,30 @@ public class Cassandra implements Closeable {
     this.failures = 0;
   }
 
-	private Cluster build() {
-		Cluster.Builder builder = Cluster.builder();
-		for (String address : addresses) {
-			builder.addContactPoint(address);
-		}
-		return builder
-			.withPort(port)
-			.withCompression(Compression.LZ4)
-			.build();
-	}
+  private Cluster build() {
+    Cluster.Builder builder = Cluster.builder();
+    for (String address : addresses) {
+      builder.addContactPoint(address);
+    }
+    return builder
+      .withPort(port)
+      .withCompression(Compression.LZ4)
+      .build();
+  }
 
   /**
    * Connects to the server.
    *
    */
   public void connect() {
-		try {
-			session = cluster.connect(keyspace);
-		} catch (NoHostAvailableException e) {
-			LOGGER.warn("Unable to connect to Cassandra, will retry contact points next time",
-					cluster, e);
-			cluster = build();
-		}
+    try {
+      session = cluster.connect(keyspace);
+    } catch (NoHostAvailableException e) {
+      LOGGER.warn("Unable to connect to Cassandra, will retry contact points next time",
+          cluster, e);
+      cluster = build();
+    }
+    batch = new BatchStatement();
   }
 
   /**
@@ -106,31 +109,37 @@ public class Cassandra implements Closeable {
               "  timestamp TIMESTAMP,                           " +
               "  value DOUBLE,                                  " +
               "  PRIMARY KEY (name, timestamp))")
-            .setConsistencyLevel(consistency)
-            );
+        );
         session.execute(new SimpleStatement(
               "CREATE TABLE IF NOT EXISTS " + tableName + "_names (   " +
               "  name VARCHAR,                                        " +
               "  last_updated TIMESTAMP,                              " +
               "  PRIMARY KEY (name))")
-            .setConsistencyLevel(consistency)
-            );
+        );
         initialized = true;
       }
 
-      session.execute(new SimpleStatement(
+      batch.add(new SimpleStatement(
             "INSERT INTO " + tableName + " (name, timestamp, value) VALUES (?, ?, ?) USING TTL ?",
             name, timestamp, value, ttl)
-          .setConsistencyLevel(consistency)
-          );
+      );
 
-      session.execute(new SimpleStatement(
+      batch.add(new SimpleStatement(
             "UPDATE " + tableName + "_names SET last_updated = ? WHERE name = ?",
             timestamp, name)
-          .setConsistencyLevel(consistency)
-          );
+      );
 
       this.failures = 0;
+    } catch (DriverException e) {
+      failures++;
+      throw e;
+    }
+  }
+
+  public void execute() {
+    try {
+      batch.setConsistencyLevel(consistency);
+      session.executeAsync(batch);
     } catch (DriverException e) {
       failures++;
       throw e;
