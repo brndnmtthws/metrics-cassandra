@@ -16,7 +16,7 @@
 	</description>
 
 	<properties>
-		<cassandra-driver-core.version>2.0.0-rc1</cassandra-driver-core.version>
+		<cassandra-driver-core.version>2.0.0-rc2</cassandra-driver-core.version>
 	</properties>
 
 	<dependencies>
