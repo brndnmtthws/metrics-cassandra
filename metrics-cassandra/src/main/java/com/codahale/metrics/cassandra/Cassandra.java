@@ -108,13 +108,15 @@ public class Cassandra implements Closeable {
               "  name VARCHAR,                                  " +
               "  timestamp TIMESTAMP,                           " +
               "  value DOUBLE,                                  " +
-              "  PRIMARY KEY (name, timestamp))")
+              "  PRIMARY KEY (name, timestamp))                 " +
+              "  WITH compaction = {'class':'LeveledCompactionStrategy'}")
         );
         session.execute(new SimpleStatement(
               "CREATE TABLE IF NOT EXISTS " + tableName + "_names (   " +
               "  name VARCHAR,                                        " +
               "  last_updated TIMESTAMP,                              " +
-              "  PRIMARY KEY (name))")
+              "  PRIMARY KEY (name))                                  " +
+              "  WITH compaction = {'class':'LeveledCompactionStrategy'}")
         );
         initialized = true;
       }
