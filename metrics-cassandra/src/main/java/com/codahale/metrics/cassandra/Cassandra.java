@@ -104,19 +104,21 @@ public class Cassandra implements Closeable {
       String tableName = sanitize(table);
       if (!initialized) {
         session.execute(new SimpleStatement(
-              "CREATE TABLE IF NOT EXISTS " + tableName + " (   " +
-              "  name VARCHAR,                                  " +
-              "  timestamp TIMESTAMP,                           " +
-              "  value DOUBLE,                                  " +
-              "  PRIMARY KEY (name, timestamp))                 " +
-              "  WITH compaction = {'class':'LeveledCompactionStrategy'}")
+              "CREATE TABLE IF NOT EXISTS " + tableName + " (      " +
+              "  name VARCHAR,                                     " +
+              "  timestamp TIMESTAMP,                              " +
+              "  value DOUBLE,                                     " +
+              "  PRIMARY KEY (name, timestamp))                    " +
+              "  WITH bloom_filter_fp_chance=0.100000 AND          " +
+              "  compaction = {'class':'LeveledCompactionStrategy'}")
         );
         session.execute(new SimpleStatement(
               "CREATE TABLE IF NOT EXISTS " + tableName + "_names (   " +
               "  name VARCHAR,                                        " +
               "  last_updated TIMESTAMP,                              " +
               "  PRIMARY KEY (name))                                  " +
-              "  WITH compaction = {'class':'LeveledCompactionStrategy'}")
+              "  WITH bloom_filter_fp_chance=0.100000 AND             " +
+              "  compaction = {'class':'LeveledCompactionStrategy'}   ")
         );
         initialized = true;
       }
