@@ -8,6 +8,9 @@ import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.SimpleStatement;
 import com.datastax.driver.core.BatchStatement;
+import com.datastax.driver.core.policies.DowngradingConsistencyRetryPolicy;
+import com.datastax.driver.core.policies.LatencyAwarePolicy;
+import com.datastax.driver.core.policies.RoundRobinPolicy;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,7 +76,9 @@ public class Cassandra implements Closeable {
     return builder
       .withPort(port)
       .withCompression(Compression.LZ4)
-      .build();
+      .withRetryPolicy(DowngradingConsistencyRetryPolicy.INSTANCE)
+      .withLoadBalancingPolicy(LatencyAwarePolicy.builder(new RoundRobinPolicy()).build())
+			.build();
   }
 
   /**
