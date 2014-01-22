@@ -88,12 +88,14 @@ public class Cassandra implements Closeable {
   public void connect() {
     try {
       session = cluster.connect(keyspace);
+      batch = new BatchStatement();
     } catch (NoHostAvailableException e) {
       LOGGER.warn("Unable to connect to Cassandra, will retry contact points next time",
           cluster, e);
+      session.shutdown();
+      cluster.shutdown();
       cluster = build();
     }
-    batch = new BatchStatement();
   }
 
   /**
