@@ -1,5 +1,7 @@
 A Codahale Metrics reporter for Cassandra 2.0
 =================
+[![Build Status](https://travis-ci.org/brndnmtthws/metrics-cassandra.svg?branch=master)](https://travis-ci.org/brndnmtthws/metrics-cassandra)
+
 This is a Cassandra reporter for the Codahale Metrics library (https://github.com/codahale/metrics).  It uses the DataStax Java driver (https://github.com/datastax/java-driver) to write metrics to Cassandra.
 
 ## Grab it from [clojars.org](https://clojars.org/)
