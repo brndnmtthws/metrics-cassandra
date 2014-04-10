@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.clojars.brenden</groupId>
 		<artifactId>metrics-parent</artifactId>
-		<version>3.0.1</version>
+		<version>3.0.2</version>
 	</parent>
 
 	<artifactId>metrics-cassandra</artifactId>
@@ -16,7 +16,7 @@
 	</description>
 
 	<properties>
-		<cassandra-driver-core.version>2.0.0-rc2</cassandra-driver-core.version>
+		<cassandra-driver-core.version>2.0.1</cassandra-driver-core.version>
 	</properties>
 
 	<dependencies>

@@ -16,7 +16,7 @@ This is a Cassandra reporter for the Codahale Metrics library (https://github.co
     <dependency>
       <groupId>org.clojars.brenden</groupId>
       <artifactId>metrics-cassandra</artifactId>
-      <version>3.0.1</version>
+      <version>3.0.2</version>
     </dependency>
   </dependencies>
 ```
