@@ -1,4 +1,4 @@
-A Codahale Metrics reporter for Cassandra 2.0
+Codahale Metrics reporter for Cassandra 2.0
 =================
 [![Build Status](https://travis-ci.org/brndnmtthws/metrics-cassandra.svg?branch=master)](https://travis-ci.org/brndnmtthws/metrics-cassandra)
 
