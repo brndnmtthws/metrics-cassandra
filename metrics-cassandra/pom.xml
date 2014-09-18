@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.clojars.brenden</groupId>
 		<artifactId>metrics-parent</artifactId>
-		<version>3.0.2</version>
+		<version>3.1.0</version>
 	</parent>
 
 	<artifactId>metrics-cassandra</artifactId>
@@ -16,19 +16,29 @@
 	</description>
 
 	<properties>
-		<cassandra-driver-core.version>2.0.1</cassandra-driver-core.version>
+		<cassandra-driver-core.version>2.1.0</cassandra-driver-core.version>
 	</properties>
 
 	<dependencies>
 		<dependency>
-			<groupId>com.codahale.metrics</groupId>
+			<groupId>io.dropwizard.metrics</groupId>
 			<artifactId>metrics-core</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.datastax.cassandra</groupId>
 			<artifactId>cassandra-driver-core</artifactId>
-			<version>${cassandra-driver-core.version}</version>
+                        <version>${cassandra-driver-core.version}</version>
+                        <exclusions>
+                          <exclusion>
+                            <groupId>org.slf4j</groupId>
+                            <artifactId>slf4j-api</artifactId>
+                          </exclusion>
+                          <exclusion>
+                            <groupId>com.codahale.metrics</groupId>
+                            <artifactId>metrics-core</artifactId>
+                          </exclusion>
+                        </exclusions>
 		</dependency>
 	</dependencies>
 </project>
