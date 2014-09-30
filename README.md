@@ -1,8 +1,8 @@
-Codahale Metrics reporter for Cassandra 2.1/2.0/1.2
+Dropwizard Metrics reporter for Cassandra 2.1/2.0/1.2
 =================
 [![Build Status](https://travis-ci.org/brndnmtthws/metrics-cassandra.svg?branch=master)](https://travis-ci.org/brndnmtthws/metrics-cassandra)
 
-This is a Cassandra reporter for the Dropwizard Metrics library (https://dropwizard.github.io/metrics).  It uses the DataStax Java driver (https://github.com/datastax/java-driver) to write metrics to Cassandra.
+This is a Cassandra reporter for the ~~Codahale~~ Dropwizard Metrics library (https://dropwizard.github.io/metrics).  It uses the DataStax Java driver (https://github.com/datastax/java-driver) to write metrics to Cassandra.
 
 ## Grab it from [clojars.org](https://clojars.org/)
 
