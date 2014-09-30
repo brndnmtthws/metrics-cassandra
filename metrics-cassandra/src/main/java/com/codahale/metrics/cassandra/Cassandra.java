@@ -32,13 +32,12 @@ public class Cassandra implements Closeable {
   private final String keyspace;
   private final String table;
   private final int ttl;
-  private final ConsistencyLevel consistency;
 
   private Cluster cluster;
   private int failures;
   private boolean initialized;
   private Session session;
-  private BatchStatement batch;
+  private ConsistencyLevel consistency;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(Cassandra.class);
 
@@ -88,7 +87,6 @@ public class Cassandra implements Closeable {
   public void connect() {
     try {
       session = cluster.connect(keyspace);
-      batch = new BatchStatement();
     } catch (NoHostAvailableException e) {
       LOGGER.warn("Unable to connect to Cassandra, will retry contact points next time",
           cluster, e);
@@ -130,27 +128,17 @@ public class Cassandra implements Closeable {
         initialized = true;
       }
 
-      batch.add(new SimpleStatement(
+      session.executeAsync(new SimpleStatement(
             "INSERT INTO " + tableName + " (name, timestamp, value) VALUES (?, ?, ?) USING TTL ?",
-            name, timestamp, value, ttl)
+            name, timestamp, value, ttl).setConsistencyLevel(consistency)
       );
 
-      batch.add(new SimpleStatement(
+      session.executeAsync(new SimpleStatement(
             "UPDATE " + tableName + "_names SET last_updated = ? WHERE name = ?",
-            timestamp, name)
+            timestamp, name).setConsistencyLevel(consistency)
       );
 
       this.failures = 0;
-    } catch (DriverException e) {
-      failures++;
-      throw e;
-    }
-  }
-
-  public void execute() {
-    try {
-      batch.setConsistencyLevel(consistency);
-      session.executeAsync(batch);
     } catch (DriverException e) {
       failures++;
       throw e;
