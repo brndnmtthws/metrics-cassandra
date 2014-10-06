@@ -80,19 +80,24 @@ public class Cassandra implements Closeable {
 			.build();
   }
 
+  private void tryConnect() {
+    session = cluster.connect(keyspace);
+  }
+
   /**
    * Connects to the server.
    *
    */
   public void connect() {
     try {
-      session = cluster.connect(keyspace);
+      tryConnect();
     } catch (NoHostAvailableException e) {
       LOGGER.warn("Unable to connect to Cassandra, will retry contact points next time",
           cluster, e);
       session.close();
       cluster.close();
       cluster = build();
+      tryConnect();
     }
   }
 
