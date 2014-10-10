@@ -1,13 +1,9 @@
 package com.codahale.metrics.cassandra;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.Session;
+import com.datastax.driver.core.*;
 import com.datastax.driver.core.ProtocolOptions.Compression;
 import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
-import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.SimpleStatement;
-import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.policies.DowngradingConsistencyRetryPolicy;
 import com.datastax.driver.core.policies.LatencyAwarePolicy;
 import com.datastax.driver.core.policies.RoundRobinPolicy;
@@ -16,8 +12,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.net.InetAddress;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.List;
 
@@ -38,6 +35,7 @@ public class Cassandra implements Closeable {
   private boolean initialized;
   private Session session;
   private ConsistencyLevel consistency;
+  private Map<String, PreparedStatement> preparedStatements;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(Cassandra.class);
 
@@ -65,6 +63,7 @@ public class Cassandra implements Closeable {
 
     this.initialized = false;
     this.failures = 0;
+    this.preparedStatements = new HashMap<String, PreparedStatement>();
   }
 
   private Cluster build() {
@@ -81,6 +80,7 @@ public class Cassandra implements Closeable {
   }
 
   private void tryConnect() {
+    preparedStatements.clear();
     session = cluster.connect(keyspace);
   }
 
@@ -133,13 +133,26 @@ public class Cassandra implements Closeable {
         initialized = true;
       }
 
-      session.executeAsync(new SimpleStatement(
-            "INSERT INTO " + tableName + " (name, timestamp, value) VALUES (?, ?, ?) USING TTL ?",
-            name, timestamp, value, ttl).setConsistencyLevel(consistency)
+      if (!preparedStatements.containsKey("values-" + tableName)) {
+        preparedStatements.put("values-" + tableName,
+            session.prepare(
+                "INSERT INTO " + tableName + " (name, timestamp, value) VALUES (?, ?, ?) USING TTL ?")
+                .setConsistencyLevel(consistency));
+      }
+      if (!preparedStatements.containsKey("names-" + tableName)) {
+        preparedStatements.put("names-" + tableName,
+            session.prepare(
+                "UPDATE " + tableName + "_names SET last_updated = ? WHERE name = ?")
+                .setConsistencyLevel(consistency));
+      }
+
+      session.executeAsync(
+          preparedStatements.get("values-" + tableName).bind(
+            name, timestamp, value, ttl)
       );
 
-      session.executeAsync(new SimpleStatement(
-            "UPDATE " + tableName + "_names SET last_updated = ? WHERE name = ?",
+      session.executeAsync(
+          preparedStatements.get("names-" + tableName).bind(
             timestamp, name).setConsistencyLevel(consistency)
       );
 
