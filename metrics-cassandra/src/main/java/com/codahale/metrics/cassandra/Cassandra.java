@@ -111,6 +111,7 @@ public class Cassandra implements Closeable {
    */
   public void send(String name, Double value, Date timestamp) throws DriverException {
     try {
+      if (session == null) connect();
       String tableName = sanitize(table);
       if (!initialized) {
         session.execute(new SimpleStatement(
@@ -146,18 +147,20 @@ public class Cassandra implements Closeable {
                 .setConsistencyLevel(consistency));
       }
 
-      session.executeAsync(
+      session.execute(
           preparedStatements.get("values-" + tableName).bind(
             name, timestamp, value, ttl)
       );
 
-      session.executeAsync(
+      session.execute(
           preparedStatements.get("names-" + tableName).bind(
             timestamp, name).setConsistencyLevel(consistency)
       );
 
       this.failures = 0;
     } catch (DriverException e) {
+      close();
+      session = null;
       failures++;
       throw e;
     }

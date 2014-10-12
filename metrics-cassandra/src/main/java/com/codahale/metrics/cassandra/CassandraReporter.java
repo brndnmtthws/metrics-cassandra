@@ -149,8 +149,6 @@ public class CassandraReporter extends ScheduledReporter {
     final Date timestamp = java.util.Calendar.getInstance().getTime();
 
     try {
-      cassandra.connect();
-
       for (Map.Entry<String, Gauge> entry : gauges.entrySet()) {
         reportGauge(entry.getKey(), entry.getValue(), timestamp);
       }
@@ -172,12 +170,6 @@ public class CassandraReporter extends ScheduledReporter {
       }
     } catch (DriverException e) {
       LOGGER.warn("Unable to report to Cassandra", cassandra, e);
-    } finally {
-      try {
-        cassandra.close();
-      } catch (DriverException e) {
-        LOGGER.warn("Error disconnecting from Cassandra", cassandra, e);
-      }
     }
   }
 
