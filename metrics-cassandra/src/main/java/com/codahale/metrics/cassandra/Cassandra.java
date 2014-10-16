@@ -160,7 +160,6 @@ public class Cassandra implements Closeable {
       this.failures = 0;
     } catch (DriverException e) {
       close();
-      session = null;
       failures++;
       throw e;
     }
@@ -177,7 +176,10 @@ public class Cassandra implements Closeable {
 
   @Override
   public void close() throws DriverException {
-    session.close();
+    if (session != null) {
+      session.close();
+      session = null;
+    }
   }
 
   protected String sanitize(String s) {
