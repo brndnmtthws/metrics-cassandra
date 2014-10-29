@@ -94,7 +94,7 @@ public class Cassandra implements Closeable {
     } catch (NoHostAvailableException e) {
       LOGGER.warn("Unable to connect to Cassandra, will retry contact points next time",
           cluster, e);
-      session.close();
+      close();
       cluster.close();
       cluster = build();
       tryConnect();
