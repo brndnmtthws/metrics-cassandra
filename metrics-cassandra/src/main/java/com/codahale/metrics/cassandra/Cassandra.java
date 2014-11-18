@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,8 +25,6 @@ import java.util.List;
 public class Cassandra implements Closeable {
   private static final Pattern UNSAFE = Pattern.compile("[\\.\\s]+");
 
-  private final List<String> addresses;
-  private final int port;
   private final String keyspace;
   private final String table;
   private final int ttl;
@@ -42,7 +41,7 @@ public class Cassandra implements Closeable {
   /**
    * Creates a new client which connects to the given address and socket factory.
    *
-   * @param address Contact point of the Cassandra cluster
+   * @param addresses Contact point of the Cassandra cluster
    * @param keyspace Keyspace for metrics
    * @param table name of metric table
    * @param ttl TTL for entries
@@ -51,37 +50,68 @@ public class Cassandra implements Closeable {
    */
   public Cassandra(List<String> addresses, String keyspace, String table,
       int ttl, int port, String consistency) {
-    this.addresses = addresses;
-    this.port = port;
 
     this.keyspace = keyspace;
     this.table = table;
     this.ttl = ttl;
     this.consistency = ConsistencyLevel.valueOf(consistency);
 
-    this.cluster = build();
+    this.cluster = build(addresses, port);
+
+    this.initialized = false;
+    this.failures = 0;
+    this.preparedStatements = new HashMap<String, PreparedStatement>();
+  }
+  
+  /**
+   * Creates a new client using an existing cluster
+   * @param cluster cluster to use
+   * @param keyspace Keyspace for metrics
+   * @param table name of metric table
+   * @param ttl TTL for entries
+   * @param consistency Consistency level to attain
+   */
+  public Cassandra(Cluster cluster, String keyspace, String table, int ttl, String consistency)
+  {
+    this.keyspace = keyspace;
+    this.table = table;
+    this.ttl = ttl;
+    this.consistency = ConsistencyLevel.valueOf(consistency);
+
+    this.cluster = cluster;
 
     this.initialized = false;
     this.failures = 0;
     this.preparedStatements = new HashMap<String, PreparedStatement>();
   }
 
-  private Cluster build() {
+  private static Cluster build(List<String> addresses, int port) {
     Cluster.Builder builder = Cluster.builder();
     for (String address : addresses) {
       builder.addContactPoint(address);
     }
-    return builder
-      .withPort(port)
-      .withCompression(Compression.LZ4)
-      .withRetryPolicy(DowngradingConsistencyRetryPolicy.INSTANCE)
-      .withLoadBalancingPolicy(LatencyAwarePolicy.builder(new RoundRobinPolicy()).build())
-			.build();
-  }
-
-  private void tryConnect() {
-    preparedStatements.clear();
-    session = cluster.connect(keyspace);
+	builder
+	  .withPort(port)
+	  .withCompression(Compression.LZ4)
+	  .withRetryPolicy(DowngradingConsistencyRetryPolicy.INSTANCE)
+	  .withLoadBalancingPolicy(LatencyAwarePolicy.builder(new RoundRobinPolicy()).build());
+	
+	Cluster cluster = builder.build();
+	
+	try {
+	  // Attempt to init the cluster to make sure it's usable. I'd prefer to remove this and leave it on the
+	  // client to retry when the connect method throws an exception.
+	  cluster.init();
+	  return cluster;
+	} catch(NoHostAvailableException e)	{
+	  LOGGER.warn("Unable to connect to Cassandra, will retry contact points next time",
+	      cluster, e);
+      cluster = builder.build();
+	  cluster.init();
+	}
+	
+	return cluster;
+	
   }
 
   /**
@@ -89,16 +119,8 @@ public class Cassandra implements Closeable {
    *
    */
   public void connect() {
-    try {
-      tryConnect();
-    } catch (NoHostAvailableException e) {
-      LOGGER.warn("Unable to connect to Cassandra, will retry contact points next time",
-          cluster, e);
-      close();
-      cluster.close();
-      cluster = build();
-      tryConnect();
-    }
+    preparedStatements.clear();
+    session = cluster.connect(keyspace);
   }
 
   /**
