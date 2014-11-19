@@ -90,28 +90,28 @@ public class Cassandra implements Closeable {
     for (String address : addresses) {
       builder.addContactPoint(address);
     }
-	builder
-	  .withPort(port)
-	  .withCompression(Compression.LZ4)
-	  .withRetryPolicy(DowngradingConsistencyRetryPolicy.INSTANCE)
-	  .withLoadBalancingPolicy(LatencyAwarePolicy.builder(new RoundRobinPolicy()).build());
-	
-	Cluster cluster = builder.build();
-	
-	try {
-	  // Attempt to init the cluster to make sure it's usable. I'd prefer to remove this and leave it on the
-	  // client to retry when the connect method throws an exception.
-	  cluster.init();
-	  return cluster;
-	} catch(NoHostAvailableException e)	{
-	  LOGGER.warn("Unable to connect to Cassandra, will retry contact points next time",
-	      cluster, e);
+    builder
+      .withPort(port)
+      .withCompression(Compression.LZ4)
+      .withRetryPolicy(DowngradingConsistencyRetryPolicy.INSTANCE)
+      .withLoadBalancingPolicy(LatencyAwarePolicy.builder(new RoundRobinPolicy()).build());
+    
+    Cluster cluster = builder.build();
+    
+    try {
+      // Attempt to init the cluster to make sure it's usable. I'd prefer to remove this and leave it on the
+      // client to retry when the connect method throws an exception.
+      cluster.init();
+      return cluster;
+    } catch(NoHostAvailableException e) {
+      LOGGER.warn("Unable to connect to Cassandra, will retry contact points next time",
+          cluster, e);
       cluster = builder.build();
-	  cluster.init();
-	}
-	
-	return cluster;
-	
+      cluster.init();
+    }
+    
+    return cluster;
+    
   }
 
   /**
