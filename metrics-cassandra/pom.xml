@@ -5,25 +5,25 @@
 	<parent>
 		<groupId>org.clojars.brenden</groupId>
 		<artifactId>metrics-parent</artifactId>
-		<version>3.1.0</version>
+		<version>3.1.1</version>
 	</parent>
 
 	<artifactId>metrics-cassandra</artifactId>
 	<name>Cassandra Integration for Metrics</name>
 	<packaging>bundle</packaging>
 	<description>
-		A reporter for Metrics which announces measurements to a Cassandra 2.0 cluster.
+		A reporter for Metrics which announces measurements to a Cassandra 3.x cluster.
 	</description>
 
 	<properties>
-		<cassandra-driver-core.version>2.1.0</cassandra-driver-core.version>
+		<cassandra-driver-core.version>3.1.2</cassandra-driver-core.version>
 	</properties>
 
 	<dependencies>
 		<dependency>
 			<groupId>io.dropwizard.metrics</groupId>
 			<artifactId>metrics-core</artifactId>
-			<version>${project.version}</version>
+			<version>${cassandra-driver-core.version}</version>
 		</dependency>
     <dependency>
       <groupId>com.datastax.cassandra</groupId>
