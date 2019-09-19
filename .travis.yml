@@ -2,4 +2,4 @@ language: java
 install: echo "Yes"
 script: mvn verify
 jdk:
-  - oraclejdk7
+  - oraclejdk11
