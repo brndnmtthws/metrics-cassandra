@@ -1,4 +1,4 @@
-Dropwizard Metrics reporter for Cassandra 2.1/2.0/1.2
+Dropwizard Metrics reporter for Cassandra 3.x
 =================
 [![Build Status](https://travis-ci.org/brndnmtthws/metrics-cassandra.svg?branch=master)](https://travis-ci.org/brndnmtthws/metrics-cassandra)
 
@@ -18,7 +18,7 @@ This is a Cassandra reporter for the ~~Codahale~~ Dropwizard Metrics library (ht
     <dependency>
       <groupId>org.clojars.brenden</groupId>
       <artifactId>metrics-cassandra</artifactId>
-      <version>3.1.0</version>
+      <version>3.1.1</version>
     </dependency>
   </dependencies>
 ```
